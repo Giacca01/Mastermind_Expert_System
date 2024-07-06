@@ -15,8 +15,8 @@
 
  =>
 
-    ;(printout t crlf crlf)
-    ;(printout t "vado ad agent  step" ?s)
+    (printout t crlf crlf)
+    (printout t "vado ad AGENT  step " ?s crlf)
     (focus AGENT)
 )
 
@@ -29,8 +29,8 @@
 
 =>
 
-  ; (printout t crlf crlf)
-  ; (printout t "vado a GAME  step" ?s)
+  (printout t crlf crlf)
+  (printout t "vado a GAME  step " ?s crlf)
   (focus GAME)
 
 )
@@ -59,8 +59,8 @@
 ; l'agente inizia facendo una proposta di codice
 (deffacts initial-facts
 	(maxduration 10)
-	(status (step 0) (mode human))
-	;;(status (step 0) (mode computer))
+	;(status (step 0) (mode human))
+	(status (step 0) (mode computer))
 	(agent-first)
 )
 

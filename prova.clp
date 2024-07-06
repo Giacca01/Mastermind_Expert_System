@@ -47,4 +47,7 @@
          (bind ?guess (create$ ?color ?color ?color ?color))
          (assert (guess (colors ?guess)))
          (printout t "Testing next color: " ?guess crlf)
-         (return))))
+         (return)
+      )
+   )
+)

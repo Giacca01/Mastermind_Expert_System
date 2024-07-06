@@ -38,6 +38,7 @@
    (status (step ?s))
    (guess (step ?s))
 =>
+    (printout t "Preparazione risposta" crlf)
    (assert (answer (step ?s) (right-placed 0) (miss-placed 0)))
 )      
 
@@ -126,6 +127,7 @@
 	(random)
 	(not (secret-code (code $?)))
 =>
+  (printout t "Generazione CODICE SEGRETO" crlf)
 	(assert (secret-code (code (create$))))
 )	
 	
