@@ -63,4 +63,3 @@
 	(status (step 0) (mode computer))
 	(agent-first)
 )
-

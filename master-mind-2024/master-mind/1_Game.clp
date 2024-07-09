@@ -42,17 +42,18 @@
    (assert (answer (step ?s) (right-placed 0) (miss-placed 0)))
 )      
 
-;(defrule check-repeated-colors (declare (salience 100))
-;  (status (step ?s))
+(defrule check-repeated-colors (declare (salience 100))
+  (status (step ?s))
   ; se in una posizione qualsiasi (modellata con $, cioè 0 o più simboli)
   ; c'è lo stesso simbolo di un'altra posizione precedente
   ; alolora c'è una ripetizione
-;  ?g <- (guess (step ?s) (g $?prima ?k $?durante ?k $?dopo))
-;=>
+  ?g <- (guess (step ?s) (g $?prima ?k $?durante ?k $?dopo))
+=>
   ; rimuovo la guess per non dare alcun suggerimento all'utente
-;  (retract ?g)
-;  (pop-focus)
-;)
+  printout t "Figa bianca" crlf
+  (retract ?g)
+  (pop-focus)
+)
 
 (defrule check-miss-placed
   (status (step ?s))
@@ -114,7 +115,8 @@
 
 
 (defrule for-humans-gameover (declare (salience -15))
-  (status (step ?s) (mode human))
+  ;(status (step ?s) (mode human))
+  (status (step ?s) (mode computer))
   (maxduration ?d&:(>= ?s ?d))
   (secret-code (code $?code))
 =>
@@ -172,5 +174,3 @@
 (deffacts my-colors
  (colors blue green red yellow orange white black purple)
  )
-
-

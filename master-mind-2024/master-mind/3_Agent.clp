@@ -33,11 +33,13 @@
 =>
   (printout t "Which strategy do you want to use (Pattern/Position)?" crlf)
   (bind ?choice (readline))
-  (assert (strategy-type (name ?choice)))
+  
   (if (eq ?choice "Pattern") then
+    (assert (strategy-type (name Pattern)))
     (focus PATTERN)
     else
       (if (eq ?choice "Position") then
+        (assert (strategy-type (name Position)))
         (focus POSITION)
       )
   )
@@ -48,11 +50,12 @@
   (strategy-type (name ?choice))
   (status (step ?s) (mode computer))
 =>
-  (if (eq ?choice "Pattern") then
+  (if (eq ?choice Pattern) then
     (focus PATTERN)
     else
-      (if (eq ?choice "Position") then
+      (if (eq ?choice Position) then
         (focus POSITION)
       )
   )
 )
+
