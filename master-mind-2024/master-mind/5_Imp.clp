@@ -45,16 +45,11 @@
 	(slot miss-placed (type INTEGER))
 )
 
-(deftemplate prev-seed
-    (slot seed (type INTEGER))
-)
-
 ; inizialmente non ho identificato alcun colore
 (deffacts initial 
     (phase (name COLOR))
     (color-codes (codes blue green red yellow orange white black purple))
     (color-numbers (numbers 1 2 3 4 5 6 7 8))
-    (prev-seed (seed 0))
 )
 
 (defrule starting-guess
@@ -62,12 +57,14 @@
     (status (step ?s & 0) (mode computer))
     (phase (name COLOR))
 =>
+    (seed (str-length (gensym*)))
     (bind ?firstColor 1)
     (bind ?secondColor 2)
     (bind ?thirdColor 3)
     (bind ?fourthColor 4)
     (assert (numeric-guess (step ?s) (numbers ?firstColor ?secondColor ?thirdColor ?fourthColor)))
     (assert (comb-state (state RECOMPUTE)))
+
 )
 
 (defrule process-first-feedback
@@ -79,10 +76,7 @@
     (not (numeric-guess (step ?s) (numbers $?nc)))
     (not (candidate-guess (step ?s) (numbers $?cc)))
     (not (guess (step ?s) (g $?cg)))
-    ?pv <- (prev-seed (seed ?sd))
 =>
-    (modify ?pv (seed (+ ?sd 1)))
-    (seed ?sd)
     (assert (best-comb (step 0) (numbers $?colors) (right-placed ?rp) (miss-placed ?mp)))
     (assert (second-best (step 0) (numbers $?colors) (right-placed ?rp) (miss-placed ?mp)))
     (if (>= (+ ?rp ?mp) 0) then
@@ -177,11 +171,7 @@
     (not (numeric-guess (step ?s) (numbers $?nc)))
     (not (candidate-guess (step ?s) (numbers $?cc)))
     (not (guess (step ?s) (g $?cg)))
-    ?pv <- (prev-seed (seed ?sd))
 =>
-
-    (modify ?pv (seed (+ ?sd 1)))
-    (seed ?sd)
 
     ; TODO: vedere quali valori usare (forse quelli della miglior combinazione??)
     (bind ?firstColor (nth$ (nth$ 1 $?numbersBest) $?colorsDebug))
@@ -284,10 +274,7 @@
     (not (numeric-guess (step ?s) (numbers $?nc)))
     (not (candidate-guess (step ?s) (numbers $?cc)))
     (not (guess (step ?s) (g $?cg)))
-    ?pv <- (prev-seed (seed ?sd))
 =>
-    (modify ?pv (seed (+ ?sd 1)))
-    (seed ?sd)
     ; Da qui in poi la somma di rp ed mp fa sempre 4
     ; quindi il tie breaker diventa rp
     (if (< ?rpBest 4) then

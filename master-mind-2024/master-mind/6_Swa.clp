@@ -27,7 +27,7 @@
     (slot val (type INTEGER))
 )
 
-(deftemplate candiate-answer
+(deftemplate candidate-answer
     (multislot colors (allowed-values 1 2 3 4 5 6 7 8) (cardinality 4 4))
 )
 
@@ -39,36 +39,56 @@
     (multislot numbers)
 )
 
-(deftemplate candidate-perm
-    (multislot perm)
+(deftemplate phase
+    (slot val (allowed-values CODES GUESS))
 )
 
 (deffacts initial
-    (color-codes (codes blue green red yellow orange white black purple))
-    (color-numbers (numbers 1 2 3 4 5 6 7 8))
-    (candidateCodesNumber (val 0))
-    (generalCounter (val 0))
+    (color-codes (codes (create$ blue green red yellow orange white black purple)))
+    (candidate-codes-number (val 0))
+    (general-counter (val 0))
+    (phase (val CODES))
 )
 
-(deffunction create-combination ($?p)
-    (if (= (length$ $?p) 4) then
-        (assert (candidate-secret-code (code $?p)))
-        (modify ?ccn (val (+ ?ccnVal 1)))
-    else
-        (bind $?numbers (create$ 1 2 3 4 5 6 7 8))
-        (foreach ?n $?numbers
-            (if (not (member$ ?n $?p)) then
-                ; aggiungo il colore alla permutazione
-                (create-combination (insert$ $?p (+ (length$ $?p) 1) ?n))
+(defrule generate-secret-codes
+    (status (step ?s & 0) (mode computer))
+    ?ph <- (phase (val CODES))
+    ?ccn <- (candidate-codes-number (val ?ccnVal))
+=>
+    (bind ?i 1)
+    (bind ?counter 0)
+    (while (<= ?i 8)
+        (bind ?j 0)
+        (while (<= ?j 8)
+            (if (neq ?i ?j) then
+                (bind ?k 0)
+                (while (<= ?k 8)
+                    (if (and (neq ?i ?k) (neq ?k ?j)) then
+                        (bind ?l 0)
+                        (while (<= ?l 8)
+                            (if (and (and (neq ?i ?l) (neq ?l ?j)) (neq ?k ?l)) then
+                                (assert (candidate-secret-code (code ?i ?j ?k ?l)))
+                                (bind ?counter (+ 1 ?counter))
+                            )
+                            (bind ?l (+ ?l 1))
+                        )
+                    )
+                    (bind ?k (+ ?k 1))
+                )
             )
+            (bind ?j (+ ?j 1))
         )
+        (bind ?i (+ ?i 1))
     )
+    (modify ?ccn (val ?counter))
+    (retract ?ph)
+    (assert (phase (val GUESS)))
 )
 
 (defrule starting-guess
     (status (step ?s & 0) (mode computer))
+    (phase (val GUESS))
 =>
-    (create-combination (create$))
     (bind ?firstColor 1)
     (bind ?secondColor 2)
     (bind ?thirdColor 3)
@@ -83,7 +103,8 @@
     (answer (step ?s1 &: (= (- ?s 1) ?s1)) (right-placed ?rp) (miss-placed ?mp))
     (numeric-guess (step ?s1 &: (= (- ?s 1) ?s1)) (numbers $?answerColors))
     ?ccn <- (candidate-codes-number (val ?ccnVal))
-    ?gc <- (general-counter (val ?gcVal &: (< ?ccnVal)))
+    ?gc <- (general-counter (val ?gcVal &: (< ?gcVal ?ccnVal)))
+    (phase (val GUESS))
 =>
     ; Conto il numero di right placed per il codice in esame
     (modify ?gc (val (+ ?gcVal 1)))
@@ -93,7 +114,7 @@
     (foreach ?i $?indexesList
         ; Se l'i-esimo colore del codice è uguale all'i-esimo della risposta
         ; ho un right placed
-        (if (eq (nth$ ?i $?codeColors) (nth ?i $?answerColors)) then
+        (if (eq (nth$ ?i $?codeColors) (nth$ ?i $?answerColors)) then
             (bind ?rpCode (+ 1 ?rpCode))
         else
             (if (member$ (nth$ ?i $?codeColors) $?answerColors) then
@@ -115,8 +136,8 @@
 (defrule reset-general-counter
     (status (step ?s) (mode computer))
     ?ccn <- (candidate-codes-number (val ?ccnVal))
-    ?gc <- (general-counter (val ?gcVal &: (>= ?ccnVal)))
-    ?ca <- (candiate-answer (colors $?candidateColors))
+    ?gc <- (general-counter (val ?gcVal &: (>= ?ccnVal ?gcVal)))
+    ?ca <- (candidate-answer (colors $?candidateColors))
 =>
     (modify ?gc (val 0))
     (assert (numeric-guess (step ?s) (numbers $?candidateColors)))
