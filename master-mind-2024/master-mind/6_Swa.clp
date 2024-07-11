@@ -43,11 +43,15 @@
     (slot val (allowed-values CODES GUESS))
 )
 
+(deftemplate candidate-sol-counter
+    (slot val (type INTEGER))
+)
+
 (deffacts initial
     (color-codes (codes (create$ blue green red yellow orange white black purple)))
     (candidate-codes-number (val 0))
-    (general-counter (val 0))
     (phase (val CODES))
+    (candidate-sol-counter (val 0))
 )
 
 (defrule generate-secret-codes
@@ -58,13 +62,13 @@
     (bind ?i 1)
     (bind ?counter 0)
     (while (<= ?i 8)
-        (bind ?j 0)
+        (bind ?j 1)
         (while (<= ?j 8)
             (if (neq ?i ?j) then
-                (bind ?k 0)
+                (bind ?k 1)
                 (while (<= ?k 8)
                     (if (and (neq ?i ?k) (neq ?k ?j)) then
-                        (bind ?l 0)
+                        (bind ?l 1)
                         (while (<= ?l 8)
                             (if (and (and (neq ?i ?l) (neq ?l ?j)) (neq ?k ?l)) then
                                 (assert (candidate-secret-code (code ?i ?j ?k ?l)))
@@ -83,6 +87,7 @@
     (modify ?ccn (val ?counter))
     (retract ?ph)
     (assert (phase (val GUESS)))
+    (assert (general-counter (val ?counter)))
 )
 
 (defrule starting-guess
@@ -96,18 +101,21 @@
     (assert (numeric-guess (step ?s) (numbers ?firstColor ?secondColor ?thirdColor ?fourthColor)))
 )
 
-
-(defrule remove-inconsistent
+; Potatura Insieme dei codici plausibili
+(defrule remove-inconsistent (declare (salience 10))
     (status (step ?s) (mode computer))
     ?cs <- (candidate-secret-code (code $?codeColors))
     (answer (step ?s1 &: (= (- ?s 1) ?s1)) (right-placed ?rp) (miss-placed ?mp))
     (numeric-guess (step ?s1 &: (= (- ?s 1) ?s1)) (numbers $?answerColors))
-    ?ccn <- (candidate-codes-number (val ?ccnVal))
-    ?gc <- (general-counter (val ?gcVal &: (< ?gcVal ?ccnVal)))
+    ; Devo esserci ancora dei codici plausibili
+    ?ccn <- (candidate-codes-number (val ?ccnVal &: (> ?ccnVal 0)))
+    ; devono esserci dei codici non ancora controllati
+    ?gc <- (general-counter (val ?gcVal &: (> ?gcVal 0)))
     (phase (val GUESS))
+    ?candSolCounter <- (candidate-sol-counter (val ?candSolCounterVal))
 =>
-    ; Conto il numero di right placed per il codice in esame
-    (modify ?gc (val (+ ?gcVal 1)))
+    ; ho controllato un codice in più
+    (modify ?gc (val (- ?gcVal 1)))
     (bind $?indexesList (create$ 1 2 3 4))
     (bind ?rpCode 0)
     (bind ?mpCode 0)
@@ -118,34 +126,44 @@
             (bind ?rpCode (+ 1 ?rpCode))
         else
             (if (member$ (nth$ ?i $?codeColors) $?answerColors) then
-                (bind ?mpCode (+ 1 ?rpCode))
+                (bind ?mpCode (+ 1 ?mpCode))
             )
         )
 
-        (if (or (neq ?rpCode ?rp) (neq ?mpCode ?mp)) then 
+    )
+
+    (if (or (neq ?rpCode ?rp) (neq ?mpCode ?mp)) then 
             ; Codice inconsistente: lo elimino
             (retract ?cs)
             (modify ?ccn (val (- ?ccnVal 1)))
+            ;(printout t "Risultati codice " ?rpCode " " ?mpCode crlf)
         else
-            ; uso il primo codice che va bene come risposta
-            (assert (candidate-answer (colors $?codeColors)))
+            (if (= ?candSolCounterVal 0) then 
+                ;(printout t "Risposta possibile: " $?codeColors crlf)
+                ; uso il primo codice che va bene come risposta
+                (assert (candidate-answer (colors $?codeColors)))
+                (modify ?candSolCounter (val 1))
+            )
         )
-    )
 )
 
+; Sottopongo il codice scelto durante la potatura
 (defrule reset-general-counter
     (status (step ?s) (mode computer))
     ?ccn <- (candidate-codes-number (val ?ccnVal))
-    ?gc <- (general-counter (val ?gcVal &: (>= ?ccnVal ?gcVal)))
+    ; Ho controllato tutti i codici
+    ?gc <- (general-counter (val ?gcVal & 0))
     ?ca <- (candidate-answer (colors $?candidateColors))
+    ?candSolCounter <- (candidate-sol-counter (val ?candSolCounterVal))
 =>
-    (modify ?gc (val 0))
+    (modify ?gc (val ?ccnVal))
     (assert (numeric-guess (step ?s) (numbers $?candidateColors)))
+    (modify ?candSolCounter (val 0))
     (retract ?ca)
 )
 
 
-(defrule numbers-to-colors
+(defrule numbers-to-colors (declare (salience 20))
     (numeric-guess (step ?s) (numbers $?numbers))
     ; TODO: sarebbe carino toglierlo
     ; per migliorare l'efficienza

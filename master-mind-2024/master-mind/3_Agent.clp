@@ -50,8 +50,8 @@
   (strategy-type (name ?choice))
   (status (step ?s) (mode computer))
 =>
-  (if (eq ?choice Pattern) then
-    (focus PATTERN)
+  (if (eq ?choice Swa) then
+    (focus SWA)
     else
       (if (eq ?choice Imp) then
         (focus IMP)
