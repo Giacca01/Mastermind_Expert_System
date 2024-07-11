@@ -3,7 +3,7 @@
 ;; scommetando la prima riga possiamo fissare il codice segreto
 
 (deffacts secret-code 
-  ;;(secret-code (code blue green orange purple))
+  ;(secret-code (code white green black purple))
   (random)
  )
 

@@ -7,7 +7,7 @@
 (defmodule AGENT (import MAIN ?ALL) (import GAME ?ALL) (export ?ALL))
 
 (deftemplate strategy-type
-  (slot name (allowed-values Pattern Position))
+  (slot name (allowed-values Swa Imp))
 )
 
 ; Questo serve per giocare a mano
@@ -31,16 +31,16 @@
 (defrule agent-player
   (status (step 0) (mode computer))
 =>
-  (printout t "Which strategy do you want to use (Pattern/Position)?" crlf)
+  (printout t "Which strategy do you want to use (Swa/Imp)?" crlf)
   (bind ?choice (readline))
   
-  (if (eq ?choice "Pattern") then
-    (assert (strategy-type (name Pattern)))
-    (focus PATTERN)
+  (if (eq ?choice "Swa") then
+    (assert (strategy-type (name Swa)))
+    (focus SWA)
     else
-      (if (eq ?choice "Position") then
-        (assert (strategy-type (name Position)))
-        (focus POSITION)
+      (if (eq ?choice "Imp") then
+        (assert (strategy-type (name Imp)))
+        (focus IMP)
       )
   )
 )
@@ -53,8 +53,8 @@
   (if (eq ?choice Pattern) then
     (focus PATTERN)
     else
-      (if (eq ?choice Position) then
-        (focus POSITION)
+      (if (eq ?choice Imp) then
+        (focus IMP)
       )
   )
 )
