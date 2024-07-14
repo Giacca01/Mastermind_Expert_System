@@ -1,6 +1,13 @@
 (defmodule GAME (import MAIN ?ALL) (export deftemplate guess answer))
 
 
+(deffunction random-new (?max)
+
+	(bind ?roll (rta 1 1000))
+	(bind ?ans (+ 1 (mod ?roll ?max)))
+	?ans
+)
+
 (deftemplate secret-code
 	(multislot code (allowed-values blue green red yellow orange white black purple) (cardinality 4 4))
 )
@@ -15,6 +22,7 @@
 	(slot right-placed (type INTEGER))
 	(slot miss-placed (type INTEGER))
 )
+
 
 
 
@@ -116,7 +124,7 @@
 	(secret-code (code $?colors))
 	(test (neq (length$ $?colors) 4))
 =>
-	(bind ?roll (random 1 8))
+	(bind ?roll (random-new 8))
 	(bind ?c-sym (nth$ ?roll $?cls))
 	(assert (try ?c-sym))		
 )

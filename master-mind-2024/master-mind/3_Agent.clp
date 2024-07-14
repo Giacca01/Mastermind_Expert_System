@@ -1,6 +1,3 @@
-; questo dobbiamo completarlo noi
-; tip: dividerlo in moduli (ad es. uno per le varie strategie di reasoning).
-
 ;  ---------------------------------------------
 ;  --- Definizione del modulo e dei template ---
 ;  ---------------------------------------------
@@ -10,24 +7,19 @@
   (slot name (allowed-values Swa Imp))
 )
 
-; Questo serve per giocare a mano
 (defrule human-player
   (status (step ?s) (mode human))
   =>
   (printout t "Your guess at step " ?s crlf)
-  ; leggo il codice immesso dall'utente
   (bind $?input (readline))
-  ; recupero i colori del codice
   (assert (guess (step ?s) (g  (explode$ $?input)) ))
-  ; in questo modo deve tornare in esecuzione il modulo game
   (pop-focus)
  )
  
-; Mi serve una regola che, qualora si stia giocando
-; in modalità agente, processi l'input dell'utente ed attivi
-; passandogli il focus (l'unico strumento che abbiamo per il passaggio tra moduli!)
-; il modulo corrispondente
-
+; Regola che, qualora si giochi in modalità computer,
+; chiede all'utente di scegliere la strategia da utilizzare
+; per poi spostare il focus sul modulo corrispondente
+; in modo che possa entrare in azione
 (defrule agent-player
   (status (step 0) (mode computer))
 =>
@@ -37,25 +29,25 @@
   (if (eq ?choice "Swa") then
     (assert (strategy-type (name Swa)))
     (focus SWA)
-    else
-      (if (eq ?choice "Imp") then
-        (assert (strategy-type (name Imp)))
-        (focus IMP)
-      )
+  else
+    (if (eq ?choice "Imp") then
+      (assert (strategy-type (name Imp)))
+      (focus IMP)
+    )
   )
 )
 
-; Serve per riportare il focus sulla strategia scelta ad ogni turno del giocatore
+; Ad ogni turno del giocatore, riporto il focus
+; sul modulo corrispondente alla strategia scelta
 (defrule fire-agent
   (strategy-type (name ?choice))
   (status (step ?s) (mode computer))
 =>
   (if (eq ?choice Swa) then
     (focus SWA)
-    else
-      (if (eq ?choice Imp) then
-        (focus IMP)
-      )
+  else
+    (if (eq ?choice Imp) then
+      (focus IMP)
+    )
   )
 )
-

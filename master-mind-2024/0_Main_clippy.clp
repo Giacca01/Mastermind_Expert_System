@@ -50,7 +50,8 @@
 
 (deffacts initial-facts
 	(maxduration 10)
-	;(status (step 0) (mode human))
-	(status (step 0) (mode computer))
+	(status (step 0) (mode human))
+	;;(status (step 0) (mode computer))
 	(agent-first)
 )
+

@@ -1,32 +1,26 @@
 (defmodule SWA (import MAIN ?ALL) (import GAME ?ALL) (import AGENT ?ALL) (export ?ALL))
 
-; Proviamo ad implementare la strategia suggerita
-; da Swaszek, cioè:
-; 1) Creare una lista di tutti i possibili codici segreti (nel nostro caso non hanno ripetizioni)
-; 2) Si parte da una guess con 4 colori (nell'originale si partiva con blue blue green green)
-; 3) Fino a che non trovo il codice segreto
-;   4) Elimino tutti i codici segreti che non avrebbero fornito la risposta data dal sistema
-;    per la risposta del passo precedente
-;   5) Il primo dei codici rimasti è la nuova risposta
-
 (deftemplate numeric-guess
     (slot step (type INTEGER))
     (multislot numbers (allowed-values 1 2 3 4 5 6 7 8) (cardinality 4 4))
 )
 
+; Struttura del potenziale codice segreto
 (deftemplate candidate-secret-code
     (multislot code (allowed-values 1 2 3 4 5 6 7 8) (cardinality 4 4))
 )
 
-; Numero di codici segreti rimasti
+; Numero di codici segreti plausibili rimasti
 (deftemplate candidate-codes-number
     (slot val (type INTEGER))
 )
 
+; Numero di codici segreti ancora da processare durante la potatura
 (deftemplate general-counter
     (slot val (type INTEGER))
 )
 
+; Struttura di una potenziale sottoposizione dell'agente al sistema
 (deftemplate candidate-answer
     (multislot colors (allowed-values 1 2 3 4 5 6 7 8) (cardinality 4 4))
 )
@@ -35,16 +29,14 @@
     (multislot codes (allowed-values 1 2 3 4 5 6 7 8))
 )
 
-(deftemplate color-numbers
-    (multislot numbers)
-)
-
 (deftemplate phase
     (slot val (allowed-values CODES GUESS))
 )
 
+; Flag che indica la presenza di un codice candidato
+; da usare come soluzione al passo i-esimo
 (deftemplate candidate-sol-counter
-    (slot val (type INTEGER))
+    (slot val (allowed-values 0 1))
 )
 
 (deffacts initial
@@ -54,6 +46,7 @@
     (candidate-sol-counter (val 0))
 )
 
+; Generazione dell'elenco dei potenziali codici segreti
 (defrule generate-secret-codes
     (status (step ?s & 0) (mode computer))
     ?ph <- (phase (val CODES))
@@ -61,9 +54,11 @@
 =>
     (bind ?i 1)
     (bind ?counter 0)
+    ; Il codice è composto da 4 cifre, ciascuna compresa tra 1 ed 8
     (while (<= ?i 8)
         (bind ?j 1)
         (while (<= ?j 8)
+            ; mi assicuro che le cifre siano diverse tra di loro
             (if (neq ?i ?j) then
                 (bind ?k 1)
                 (while (<= ?k 8)
@@ -90,6 +85,7 @@
     (assert (general-counter (val ?counter)))
 )
 
+; Tentativo iniziale con 4 colori tutti diversi
 (defrule starting-guess
     (status (step ?s & 0) (mode computer))
     (phase (val GUESS))
@@ -101,15 +97,15 @@
     (assert (numeric-guess (step ?s) (numbers ?firstColor ?secondColor ?thirdColor ?fourthColor)))
 )
 
-; Potatura Insieme dei codici plausibili
+; Potatura Insieme dei codici plausibili in base a risposta sistema
 (defrule remove-inconsistent (declare (salience 10))
     (status (step ?s) (mode computer))
     ?cs <- (candidate-secret-code (code $?codeColors))
     (answer (step ?s1 &: (= (- ?s 1) ?s1)) (right-placed ?rp) (miss-placed ?mp))
     (numeric-guess (step ?s1 &: (= (- ?s 1) ?s1)) (numbers $?answerColors))
-    ; Devo esserci ancora dei codici plausibili
+    ; Devo esserci ancora dei codici segreti plausibili
     ?ccn <- (candidate-codes-number (val ?ccnVal &: (> ?ccnVal 0)))
-    ; devono esserci dei codici non ancora controllati
+    ; devono esserci dei codici non ancora controllati durante la corrente fase di potatura
     ?gc <- (general-counter (val ?gcVal &: (> ?gcVal 0)))
     (phase (val GUESS))
     ?candSolCounter <- (candidate-sol-counter (val ?candSolCounterVal))
@@ -119,6 +115,8 @@
     (bind $?indexesList (create$ 1 2 3 4))
     (bind ?rpCode 0)
     (bind ?mpCode 0)
+
+    ; Calcolo la risposta che avrei ottenuto se ?cs fosse davvero il codice segreto
     (foreach ?i $?indexesList
         ; Se l'i-esimo colore del codice è uguale all'i-esimo della risposta
         ; ho un right placed
@@ -133,26 +131,25 @@
     )
 
     (if (or (neq ?rpCode ?rp) (neq ?mpCode ?mp)) then 
-            ; Codice inconsistente: lo elimino
-            (retract ?cs)
-            (modify ?ccn (val (- ?ccnVal 1)))
-            ;(printout t "Risultati codice " ?rpCode " " ?mpCode crlf)
-        else
-            (if (= ?candSolCounterVal 0) then 
-                ;(printout t "Risposta possibile: " $?codeColors crlf)
-                ; uso il primo codice che va bene come risposta
-                (assert (candidate-answer (colors $?codeColors)))
-                (modify ?candSolCounter (val 1))
-            )
+        ; Codice inconsistente con la risposta effettivamente ottenuta: lo elimino
+        (retract ?cs)
+        (modify ?ccn (val (- ?ccnVal 1)))
+    else
+        (if (= ?candSolCounterVal 0) then 
+            ; uso il primo codice che va bene come risposta
+            (assert (candidate-answer (colors $?codeColors)))
+            (modify ?candSolCounter (val 1))
         )
+    )
 )
 
 ; Sottopongo il codice scelto durante la potatura
 (defrule reset-general-counter
     (status (step ?s) (mode computer))
     ?ccn <- (candidate-codes-number (val ?ccnVal))
-    ; Ho controllato tutti i codici
+    ; Ho controllato tutti i codici...
     ?gc <- (general-counter (val ?gcVal & 0))
+    ; e c'è n'è almeno uno compatibile da usare come risposta
     ?ca <- (candidate-answer (colors $?candidateColors))
     ?candSolCounter <- (candidate-sol-counter (val ?candSolCounterVal))
 =>
@@ -162,11 +159,9 @@
     (retract ?ca)
 )
 
-
+; Conversione della risposta al formato simbolico
 (defrule numbers-to-colors (declare (salience 20))
     (numeric-guess (step ?s) (numbers $?numbers))
-    ; TODO: sarebbe carino toglierlo
-    ; per migliorare l'efficienza
     (status (step ?s) (mode computer))
     (color-codes (codes $?colors))
 =>
@@ -180,9 +175,8 @@
                 (g ?firstColor ?secondColor ?thirdColor ?fourthColor)
             )
     )
-    ; TODO: stampre la risposta tradotta
+    
     (printout t "Guess: " ?firstColor " " ?secondColor " " ?thirdColor " " ?fourthColor " at step: " ?s crlf)
     ; restituisco il controllo a game, in modo che processi la risposta
-    ; TODO: vedere se serva davvero
     (pop-focus)
 )
